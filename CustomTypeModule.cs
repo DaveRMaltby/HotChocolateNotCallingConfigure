@@ -1,11 +1,19 @@
-﻿using HotChocolate.Execution.Configuration;
+﻿using HotChocolate;
+using HotChocolate.Configuration;
+using HotChocolate.Data;
+using HotChocolate.Data.Sorting;
+using HotChocolate.Execution.Configuration;
+using HotChocolate.Resolvers;
 using HotChocolate.Types;
 using HotChocolate.Types.Descriptors;
 using HotChocolate.Types.Descriptors.Definitions;
 using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
 using System.Threading;
 using System.Threading.Tasks;
+using static HotChocolate.Language.Utf8GraphQLParser;
 
 namespace HotChocolateNotCallingConfigure
 {
@@ -29,21 +37,31 @@ namespace HotChocolateNotCallingConfigure
 
             if (ExtendSchemaIn != null)
             {
-                //Extend Queries with another field.
-                var typeDefinition = new ObjectTypeDefinition(nameof(Queries));
-
-                var fieldDefinition = new ObjectFieldDefinition(ExtendSchemaIn.QueryName.FirstCharToLowerCase(),
-                                              type: TypeReference.Parse("[UserInfo]!"),
-                                              pureResolver: ctx => new List<UserInfo>() );
-
-                typeDefinition.Fields.Add(fieldDefinition);
-
-                //NOTE:  Calling a derived class of ObjectTypeExtension to inject the UseSorting facility
-                var objectTypeExtension = ObjectTypeExtensionEx.CreateUnsafeEx(typeDefinition);
-                dynamicTypes.Add(objectTypeExtension);
+                dynamicTypes.Add(new QueryNameExtension(ExtendSchemaIn.QueryName));
             }
 
             return dynamicTypes;
+        }
+
+        public class QueryNameExtension : ObjectTypeExtension
+        {
+            private string fieldName;
+
+            public QueryNameExtension(string fieldName)
+            {
+                this.fieldName = fieldName;
+            }
+
+            protected override void Configure(IObjectTypeDescriptor descriptor)
+            {
+                descriptor.Name(nameof(Queries));
+                descriptor.Field(fieldName.FirstCharToLowerCase()).
+                    Type(Syntax.ParseTypeReference("[UserInfo]!")).
+                    Resolve(context => new ValueTask<IQueryable<UserInfo>>(new List<UserInfo>().AsQueryable())).
+                    UseSorting(null);
+
+                base.Configure(descriptor);
+            }
         }
     }
 }

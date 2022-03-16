@@ -39,7 +39,7 @@ namespace HotChocolateNotCallingConfigure
                 typeDefinition.Fields.Add(fieldDefinition);
 
                 //NOTE:  Calling a derived class of ObjectTypeExtension to inject the UseSorting facility
-                var objectTypeExtension = ObjectTypeExtensionEx.CreateUnsafe(typeDefinition);
+                var objectTypeExtension = ObjectTypeExtensionEx.CreateUnsafeEx(typeDefinition);
                 dynamicTypes.Add(objectTypeExtension);
             }
 
